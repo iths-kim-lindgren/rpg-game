@@ -1,0 +1,27 @@
+body {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+}
+
+.hidden {
+    display: none;
+}
+
+.textbox {
+    height: 15rem;
+    border: 1px solid black;
+    padding: 0.5rem;
+    overflow-y: scroll;
+}
+
+button {
+    width: 10rem;
+    height: 3rem;
+}
+
+canvas {
+    width: 80vw;
+    height: 50vh;
+    border: 1px solid black;
+}
