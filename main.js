@@ -1,274 +1,145 @@
+//skapa init-funktion i map som skapar första location
+//render-funktion i map som uppdaterar alla objekts läge
+//on mouseDown, kolla om musens position är innanför alla locations x- och y-koordinater
+//alltså loopa över alla objekts x- och y-koordinater
+//om musen är innanför en locations koordinater, starta en renderfunktion som 
+//uppdaterar koordinaterna beroende på musens rörelser
+//rendera även paths från location på nytt
+//on mouseUp, avsluta render-funktionen
+//lagra alla x- och y-koordinater för locations, skapa funktion för att kolla om musen är på en location
+
+
+let canvas = document.querySelector("#myCanvas")
+let ctx = canvas.getContext("2d")
+let canvasWidth = 480
+let canvasHeight = 320
+
 class Map {
-    constructor(locations, characters, NPCs){
-        this.locations = locations
-        this.characters = characters
-        this.NPCs = NPCs
+    constructor(locations, pieces, paths) {
+        this.locations = {}
+        this.pieces = {}
+        this.paths = {}
+        this.mouseDrag = false
     }
 
-    initiateLocation(location) {
-        game.eraseText()
-        if (location.name == "MainHall") {
-            game.displayText(`You are in the Main Hall.`)
-        } else {
-            game.displayText(`You are in ${location.name}.`)
-        }
-            game.displayText(`${location.description}`)
-            let presentNPCs = game.charArray.slice(1).filter(NPC => NPC.location == location)
-            presentNPCs.forEach(NPC => game.displayText(`${NPC.name} is here.`))
+    init(name, x, y, paths, adjLocations) {
+        canvas.addEventListener("mousedown", (e) => {
+            this.mouseDown(e)
+        })
+
+        let firstLocation = new Location("home", 10, 10, null, null)
+        firstLocation.create("home", 10, 10, null, null)
     }
 
-    moveForward(character) { //game.map.moveForward(game.map.characters[0])
-        if (character.inCombat == true) {
-            return game.displayText("You cannot move to a different location when you are in combat!")
-        }
-        switch(true){
-            case (character.location.name == "Cobol"):
-                character.location = this.locations.MainHall
-                this.initiateLocation(this.locations.MainHall)
-                break;
-            case (character.location.name == "MainHall"):
-                character.location = this.locations.Pascal
-                this.initiateLocation(this.locations.Pascal)
-                break;
-            case (character.location.name == "Pascal"):
-                game.displayText("You cannot go forward, only back.")
-                break;
+    mouseDown(e) {
+        canvas.removeEventListener("mousedown", (e) => {
+            this.mouseDown(e)
+        })
+            Object.entries(map.locations).forEach(function(entry){
+                let x = entry[1].x
+                let y = entry[1].y
+               //Object.entries skapar en array av objektet
+                if (e.pageX < x + 75 + canvas.offsetLeft && e.pageX > x - 75 +
+                    canvas.offsetLeft && e.pageY < y + 20 + canvas.offsetTop &&
+                    e.pageY > y - 20 + canvas.offsetTop) {
+                    map.mouseDrag = true
+
+                    let objectName = entry[1].name
+                    canvas.addEventListener("mousemove", (e) => {
+                        console.log(`mouseDown ${x}${y}`)
+                        map.mouseMove(e, map.locations[objectName])
+                    });
+                }
+            })
+            canvas.addEventListener("mouseup", (e) => {
+                map.mouseUp(e)
+            })
         }
 
-    }
+    mouseMove(e, location){
+        if (map.mouseDrag){
+            location.x = e.pageX - canvas.offsetLeft;
+            location.y = e.pageY - canvas.offsetTop;
+            console.log(`mousemove ${location.x}${location.y}`)
 
-    moveBack(character) {
-        if (character.inCombat == true) {
-            return game.displayText("You cannot move to a different location when you are in combat!")
-        }   
-        switch(true){
-            case (character.location.name == "Pascal"):
-                character.location = this.locations.MainHall
-                this.initiateLocation(this.locations.MainHall)
-                break;
-            case (character.location.name == "MainHall"):
-                character.location = this.locations.Cobol
-                this.initiateLocation(this.locations.Cobol)
-                break;
-            case (character.location.name == "Cobol"):
-                game.displayText("You cannot go back, only forward.")
-                break;
+
+            map.render(ctx)
+            //måste skicka in koordinater till render för att EN av lådorna ska byta plats
+            //när musen rör sig, rita om lådan till dess nya koordinater
+            //rendera allt på sidan
         }
     }
+    
+    mouseUp(e) {
+        this.mouseDrag = false
+        canvas.removeEventListener("mousemove", (e) => {
+            map.mouseMove(e, map.locations[objectName])
+        })
+    }
+    
+    render(ctx) {
+        ctx.clearRect(0, 0, canvasWidth, canvasHeight)
+        Object.entries(map.locations).forEach(function(location){
+            let x = location[1].x
+            let y = location[1].y
+            console.log(`Render ${x}${y}`)
+            // if (x == movingLocationX) && (y == movingLocationY)
+            let name = location[1].name
+        map.locations[name].draw(ctx, x, y)
+
+        })
+        //gör en for-loop över alla locations och rita upp dem med deras draw-metoder
+    }
+
+
 }
 
 class Location {
-    constructor(name, description) {
+    constructor(name, x, y, paths, adjLocations) {
         this.name = name
-        this.description = description
+        this.x = x
+        this.y = y
+        this.paths = paths
+        this.adjLocations = adjLocations
+        this.width = 75
+        this.height = 20
+        this.color = "black"
     }
 
-    describe(target){
-        console.log(target.description)
+    create(locationName, x, y, paths, adjLocations) {
+        let location = new Location(locationName, x, y, paths, adjLocations)
+        map.locations[locationName] = location
+        //för varje objekt som ritas ut, lagra objektet i map
+        this.draw(ctx, x, y)
+
+        location.addEventListener //klicka på den för att öppna meny och skapa en ny location
+    }
+
+    draw(ctx, x, y) {
+        ctx.beginPath();
+        ctx.rect(x, y, this.width, this.height);
+        ctx.fillStyle = this.color;
+        ctx.stroke();
+        ctx.closePath();
     }
 }
 
-class Character {
-    constructor(name, health, strength, inCombat, status, location, description) {
+class Path {
+    constructor(terrain, adjLocations) {
+        this.terrain = terrain
+        this.adjLocations = adjLocations
+    }
+}
+
+class Piece {
+    constructor(name, location) {
         this.name = name;
-        this.health = health;
-        this.strength = strength;
-        this.inCombat = inCombat;
-        this.status = status
         this.location = location;
-        this.description = description;
-        
-    }
-    
-    attack(target) { //game.main.attack(game.NPCArray[3])
-        if (target.location != game.main.location){
-            game.displayText(`${target.name} is not here.`)
-            return
-        }
-
-        this.inCombat = true
-        if (this.lastAttacked) {
-            this.lastAttacked = target
-        }
-
-        if (target.attitude == "friendly") {
-            target.attitude = "hostile"
-            game.displayText(`${target.name} becomes hostile!`)
-        }
-        if (this.health > 0) {
-            const damage = this.strength;
-            game.displayText(`${this.name} attacks ${target.name} and causes ${damage} damage points`)
-            target.health -= damage;
-        }
-        if (target.health > 0) {
-            game.displayText(`${target.name} has ${target.health} health points left`);
-            if (target.attitude) target.attack(this)
-        } else {
-            target.health = 0;
-            target.status = "dead";
-            this.inCombat = false;
-            target.inCombat = false;
-            game.displayText(`${target.name} is dead!`)
-            if (this.xp >= 0) {
-                let bonusXP = 10;
-                game.displayText(`${this.name} has eliminated ${target.name} and wins ${bonusXP} epxerience points.`)
-                this.xp += bonusXP;
-            } else {
-                game.displayText("You have died! Booooooh, you failed")
-            }
-            if (target.name == "Cotton Turd" && target.status == "dead"){
-                game.displayText("You have defeated the cotton turd! The camels rejoice - YOU HAVE WON!")
-            }
-        }
     }
 }
 
-class Main extends Character {
-    constructor(name, health, strength, inCombat, status, location, description, lastAttacked, xp) {
-        super(name, health, strength, inCombat, status, location, description)
-        this.lastAttacked = lastAttacked;
-        this.xp = xp;
-    }
-
-    describe(target){
-        if (this.location == target.location){
-            game.displayText(target.description)
-        } else {
-            game.displayText(`${target.name} is not here.`)
-        }
-    }
-}
-
-class NPC extends Character {
-    constructor(name, health, strength, inCombat, status, location, description, attitude) {
-        super(name, health, strength, inCombat, status, location, description)
-        this.attitude = attitude;
-    }
-}
-
-class Game {
-    constructor(){
-        this.charArray = []
-        this.NPCs = {}
-        this.locations = {}
-        this.main = null
-        this.map = null
-
-        this.startBtn = document.querySelector(".start")
-        this.textbox = document.querySelector(".textbox")
-        this.forwardBtn = document.querySelector(".forward")
-        this.backBtn = document.querySelector(".back")
-        this.describeBtn = document.querySelector(".describe")
-        this.attackBtn = document.querySelector(".attack")
-        this.helpBtn = document.querySelector(".help")
-
-        this.gameRunning = false
-    }
-
-    setup() {
-
-        this.startBtn.addEventListener("click", function(_){
-            (game.gameRunning == true) ? location.reload() : game.init() //ERROR
-        })
-        this.helpBtn.addEventListener("click", function(_){
-            alert('These are the game commands...')
-        })
-    }
-
-    init() {
-        if (game.charArray) game.charArray = [] 
-
-        this.createLocation("Cobol", "Feels like home. A doorway leads forward to the Main Hall.")
-        this.createLocation("MainHall", "There are insufficient sofas in the lounge. A door leads back to Cobol, another to Pascal. A foul smell comes from Pascal.")
-        this.createLocation("Pascal", "The classroom feels alien. A doorway leads back to the Main Hall.")
-        
-        this.main = this.createMain("Linus the Avenger", 100, 25, false, "alive", this.locations.Cobol, "This is you - the awesome hero who is going to bring justice to the camels.", 1, 0)
-        this.createNPC("Crying Camel", 30, 10, false, "alive", this.locations.Cobol, "Crying Camel is sobbing uncontrollably. 'Please', he says, 'save my friends from the cotton monster!'", "friendly")
-        this.createNPC("Weeping Camel", 30, 10, false, "alive", this.locations.MainHall, "The camel is weeping. 'The monster is just behind that doorway - will you please help us?'", "friendly")
-        this.createNPC("Enslaved Camel", 30, 10, false, "alive", this.locations.Pascal, "A camel enslaved by the cotton turd.", "friendly")
-        this.createNPC("Cotton Turd", 75, 25, false, "alive", this.locations.Pascal, "Behold the lord of all enslaved camels!", "hostile")
-        this.createMap(this.locations, this.charArray, this.NPCs)
-        
-        this.map.initiateLocation(this.locations.Cobol)
-
-        if (game.gameRunning) return
-
-        this.forwardBtn.addEventListener("click", function(_){
-            game.map.moveForward(game.map.characters[0])
-        })
-        this.backBtn.addEventListener("click", function(_){
-            game.map.moveBack(game.map.characters[0])
-        })
-        this.describeBtn.addEventListener("click", function(_){
-            let input = prompt("Which character would you like to describe?")
-            if (game.NPCs.hasOwnProperty(input)) { //hur ignorera case och antalet mellanslag?
-                let target = game.NPCs[input]
-                game.main.describe(target)  
-            } else if (input == null || input == "") { return }
-            else {
-                game.displayText(`There is no character with the name "${input}".`)
-            }
-        })
-        this.attackBtn.addEventListener("click", function(_){
-            if (game.main.inCombat == true){
-                // for (inCombat of game.NPCs){
-
-                // }
-                // // let target = game.NPCs.hasOwnProperty(inCombat = true)
-                return game.main.attack(game.main.lastAttacked)
-            }
-            let input = prompt("Which character will you attack?")
-            if (game.NPCs.hasOwnProperty(input)) { //hur ignorera case och antalet mellanslag?
-                if (game.NPCs[input].status == "dead"){
-                    return game.displayText(`${input} is dead.`)
-                }
-                let target = game.NPCs[input]
-                game.main.attack(target)
-            } else if (input == null || input == "") { return } 
-            else {
-                game.displayText(`There is no character with the name "${input}".`)
-            }
-        })
-        game.gameRunning = true
-    }
-    
-    createLocation(name, description) {
-        let newLoc = new Location(name, description)
-        this.locations[name]=newLoc 
-        
-    }
-    
-    createMain(name, health, strength, inCombat, status, location, description, lastAttacked, xp) {
-        // let location = this.locations.Cobol
-        // let charLocation = location[0] //kolla upp metod "array.find"    
-        let newChar = new Main(name, health, strength, inCombat, status, location, description, lastAttacked, xp)
-        this.charArray.push(newChar)
-        return newChar
-    }
-    
-    createNPC(name, health, strength, inCombat, status, location, description, attitude) {
-        let newChar = new NPC(name, health, strength, inCombat, status, location, description, attitude)
-        this.NPCs[name] = newChar
-        this.charArray.push(newChar)
-        return newChar
-    }
-
-    createMap(locations, characters, NPCs){
-        let map = new Map(locations, characters, NPCs)
-        this.map = map
-    }
-
-    displayText(txt) {
-        document.querySelector(".gameLog").innerHTML += `${txt}<br>`;
-      };
-
-    eraseText() {
-        document.querySelector(".gameLog").innerHTML = "";
-    }
-}
-
-
-
-let game = new Game
-game.setup()
-
+let map = new Map(null, null, null)
+map.init("home", 10, 10, null, null)
+map.locations["home"].create("away", 180, 180, null, null)
+// map.locations["home"].create("away", 180, 100, null, null)
+// map.locations["home"].create("away", 100, 180, null, null)
